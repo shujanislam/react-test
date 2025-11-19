@@ -14,40 +14,36 @@ export async function parseMarkdown(md: string) {
     return `COMP_${id++}`;
   }
 
+const CopyIcon = () => (
+  <svg
+    fill="currentColor"
+    height="14"
+    width="14"
+    viewBox="0 0 352.804 352.804"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <g>
+      <path d="M318.54,57.282h-47.652V15c0-8.284-6.716-15-15-15H34.264c-8.284,0-15,6.716-15,15v265.522c0,8.284,6.716,15,15,15h47.651
+        v42.281c0,8.284,6.716,15,15,15H318.54c8.284,0,15-6.716,15-15V72.282C333.54,63.998,326.824,57.282,318.54,57.282z
+        M49.264,265.522V30h191.623v27.282H96.916c-8.284,0-15,6.716-15,15v193.24H49.264z M303.54,322.804H111.916V87.282H303.54V322.804
+        z"/>
+    </g>
+  </svg>
+);
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      console.log("copied");
+    })
+  }
+
   function preprocess(text: string) {
     const lines = text.split("\n");
     let insideCard = false;
     let cardBuffer: string[] = [];
     let out: string[] = [];
 
-    for (let line of lines) {
-      // ---------- CARD ----------
-      if (line.trim() === ":card:") {
-        insideCard = true;
-        cardBuffer = [];
-        continue;
-      }
-
-      if (line.trim() === ":endcard:") {
-        insideCard = false;
-
-        const key = newKey();
-        components[key] = (
-          <div className="border border-gray-300 rounded-lg p-4 bg-white shadow">
-            <p className="whitespace-pre-line text-gray-800">
-              {cardBuffer.join("\n")}
-            </p>
-          </div>
-        );
-
-        out.push(`<div data-comp="${key}"></div>`);
-        continue;
-      }
-
-      if (insideCard) {
-        cardBuffer.push(line);
-        continue;
-      }
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
 
       // ---------- TITLE ----------
       if (line.startsWith(":title:")) {
@@ -61,9 +57,11 @@ export async function parseMarkdown(md: string) {
         const key = newKey();
 
         components[key] = (
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
-            {label}
-          </button>
+          <div className="flex justify-center items-center">
+            <button className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2">
+              {label}
+            </button>
+          </div>
         );
 
         out.push(`<div data-comp="${key}"></div>`);
@@ -115,15 +113,15 @@ export async function parseMarkdown(md: string) {
                 <input
                   type="text"
                   placeholder="Search docs..."
-                  className="w-64 rounded bg-gray-900 text-gray-200 placeholder-gray-500 px-4 py-2 pr-14 border border-gray-700 focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  className="w-128 rounded bg-black text-gray-200 placeholder-gray-500 px-4 py-2 pr-14 border border-gray-700"
                 />
 
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 transform flex items-center space-x-1 text-xs text-gray-400">
-                  <kbd className="px-2 py-0.5 bg-gray-800 border border-gray-700 rounded">
+                  <kbd className="px-2 py-0.5 bg-black border border-gray-700 rounded">
                     Ctrl
                   </kbd>
                   <span>+</span>
-                  <kbd className="px-2 py-0.5 bg-gray-800 border border-gray-700 rounded">
+                  <kbd className="px-2 py-0.5 bg-black border border-gray-700 rounded">
                     K
                   </kbd>
                 </div>
@@ -232,7 +230,7 @@ if (line.startsWith(":sidebar:")) {
             const hasChildren = items.length > 0;
 
             return (
-              <div key={idx} className="group">
+              <div key={idx} className="group mt-8">
                 <button
                   className="w-full text-left px-4 py-2 text-gray-300 hover:text-white font-medium flex justify-between items-center"
                   onClick={(e) => {
@@ -280,7 +278,7 @@ if (line.startsWith(":sidebar:")) {
       </aside>
 
       {/* Ensure right content shifts */}
-      <div className="flex-1 ml-64 mt-20 px-8" />
+      <div className="flex-1 ml-64 px-8" />
     </div>
   );
 
@@ -468,7 +466,7 @@ if (line.startsWith(":card:")) {
 
   components[key] = (
     <div className="flex justify-center items-center py-16">
-      <div className="w-full max-w-3xl bg-black border border-neutral-800 rounded-2xl shadow-lg p-8 hover:border-neutral-700 hover:-translate-y-1 transition-all duration-200">
+      <div className="w-full max-w-3xl bg-black border border-neutral-800 rounded-2xl shadow-lg p-8 hover:border-neutral-700">
         <h3 className="text-2xl font-semibold text-white mb-2">
           {header || "Card Title"}
         </h3>
@@ -496,6 +494,12 @@ if (line.startsWith(":code:")) {
       <div className="w-full max-w-3xl bg-[#0a0a0a] border border-neutral-800 rounded-xl shadow-lg overflow-hidden">
         <div className="flex items-center justify-between px-8 py-2 border-b border-neutral-800 bg-[#111]">
           <span className="text-[11px] text-gray-500 font-mono">code snippet</span>
+          <button
+            className="text-gray-400 hover:text-gray-200"
+            onClick={() => handleCopy(lines.join("\n"))}
+          >
+            <CopyIcon />
+          </button>
         </div>
 
         <pre className="px-5 py-4 text-[13px] leading-relaxed text-gray-200 font-mono overflow-x-auto whitespace-pre-wrap">
@@ -522,6 +526,12 @@ if (line.startsWith(":bash:")) {
       <div className="w-full max-w-3xl bg-[#0a0a0a] border border-neutral-800 rounded-xl shadow-lg overflow-hidden">
         <div className="flex items-center justify-between px-8 py-2 bg-[#0a0a0a]">
           <span className="text-[11px] text-gray-500 font-mono">bash</span>
+          <button
+            className="text-gray-400 hover:text-gray-200"
+            onClick={() => handleCopy(lines.join("\n"))}
+          >
+            <CopyIcon />
+          </button>
         </div>
 
         <pre className="px-5 py-4 text-[13px] leading-relaxed text-gray-200 font-mono overflow-x-auto whitespace-pre-wrap">
@@ -545,23 +555,8 @@ if (line.startsWith(":footer:")) {
 
   components[key] = (
     <footer className="w-full h-64 border-t border-neutral-800 bg-black text-gray-400 py-8 px-6 mt-12">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
-        
-        {/* Logo */}
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0"> 
         <div className="flex items-center space-x-2 text-gray-500">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="1.5"
-            stroke="currentColor"
-            className="w-6 h-6 text-gray-400"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18m9-9H3" />
-          </svg>
-          <span className="font-semibold text-gray-300 tracking-wide">
-            YourProject
-          </span>
         </div>
 
         {/* Links */}
@@ -583,7 +578,7 @@ if (line.startsWith(":footer:")) {
 
         {/* Copyright */}
         <p className="text-xs text-gray-600">
-          © {new Date().getFullYear()} YourProject. All rights reserved.
+          © {new Date().getFullYear()} All rights reserved.
         </p>
       </div>
     </footer>
@@ -593,6 +588,85 @@ if (line.startsWith(":footer:")) {
   continue;
 }
 
+// ---------- ALERT TYPES ----------
+if (line.startsWith(":info:") || line.startsWith(":alert:") || line.startsWith(":warning:") || line.startsWith(":success:")) {
+  const typeMatch = line.match(/^:(info|alert|warning|success):\s*\{([^}]+)\}/);
+  if (!typeMatch) continue;
+
+  const [, type, message] = typeMatch;
+  const key = newKey();
+
+  const colors: Record<string, { bg: string; border: string; text: string }> = {
+    info: { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-600" },
+    alert: { bg: "bg-red-100", border: "border-red-400", text: "text-red-600" },
+    warning: { bg: "bg-amber-100", border: "border-amber-400", text: "text-amber-600" },
+    success: { bg: "bg-green-100", border: "border-green-400", text: "text-green-600" },
+  };
+
+  const color = colors[type];
+
+  components[key] = (
+    <div className="flex justify-center py-4">
+      <div className={`w-full max-w-3xl ${color.border} ${color.bg} p-4 rounded-md`}>
+        <p className={`font-medium ${color.text}`}>{message}</p>
+      </div>
+    </div>
+  );
+
+  out.push(`<div data-comp="${key}"></div>`);
+  continue;
+}
+// ---------- DEFAULT / ENDDEFAULT ----------
+if (line.startsWith(":default:")) {
+  let rawMarkdown = "";
+  let j = i + 1;
+  let endIndex = -1;
+
+  // Collect lines until :enddefault:
+  for (; j < lines.length; j++) {
+    if (lines[j].trim().startsWith(":enddefault:")) {
+      endIndex = j;
+      break;
+    }
+    rawMarkdown += lines[j] + "\n";
+  }
+
+  const parsedContent = unified()
+    .use(remarkParse)
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeStringify, { allowDangerousHtml: true })
+    .processSync(rawMarkdown);
+
+  let parsedHtml = String(parsedContent);
+
+  const headingClass =
+    "text-2xl/7 font-bold text-white sm:truncate sm:text-3xl sm:tracking-tight";
+
+  parsedHtml = parsedHtml.replace(
+    /<h([1-6])([^>]*)>/g,
+    `<h$1 class="${headingClass}" $2>`
+  );
+
+  const key = newKey();
+  components[key] = (
+    <div className="flex-1 md:ml-4 px-6 md:px-12 py-10">
+      <div className="max-w-3xl mx-auto leading-12 text-gray-200 prose prose-invert prose-neutral prose-p:text-gray-300 prose-a:text-green-500 prose-code:text-green-400 prose-pre:bg-neutral-900 prose-pre:border prose-pre:border-neutral-800"
+           dangerouslySetInnerHTML={{ __html: parsedHtml }}
+      />
+    </div>
+  );
+
+  out.push(`<div data-comp="${key}"></div>`);
+
+  // Skip lines that were processed
+  if (endIndex !== -1) i = endIndex;
+  continue;
+}
+
+if (line.startsWith(":enddefault:")) {
+  // Optional: just skip it since :default: already handled
+  continue;
+}
 
       out.push(line);
     }
