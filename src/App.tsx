@@ -24,7 +24,7 @@ export default function App() {
     };
 
     socket.onmessage = (event) => {
-      const msg = event.data || exampleMd; // fallback if message empty
+      const msg = event.data || ''; // fallback if message empty
       parseMarkdown(msg).then((r) => {
         setHtml(r.html);
         setFm(r.frontmatter);

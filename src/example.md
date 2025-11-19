@@ -31,7 +31,9 @@ This is another text
 
 :button: Click me
 
-:assesment: [Git assesment], {try out a git pull command}, (console.log("working"))
+:assesment: [Git assesment], {try out a git pull command}, <git-field>, (if(textfield == "git pull") { console.log("hello")} else { console.log('wrong')})
+
+:assesment: [Docker assesment], {try out a docker pull command}, <docker-field>, (if(textfield == "docker pull") { return true; } else { return false; })
 
 :code: {console.log("Hello world")}, {const x = 2.5;};
 
