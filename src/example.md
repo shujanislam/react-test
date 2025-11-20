@@ -1,45 +1,100 @@
-
-:navbar: Home , About , Logout
-
-:sidebar: [overview] , {Intoduction, Docs} | [installation] | [Profile], {Settings, Logout}
+:navbar: Home , About
+:sidebar: [Getting Started] {Prerequisites, Installation} | [Customs] {navbar, sidebar, footer} | [Special] {API playground, Assessments}
 
 :default:
 
-# Heading
+# DevOnBoard Documentation
 
-Normal text
+Get your docs live fast and start fixing what matters right away.
 
-## this is another Heading
+## Getting Started
 
-This is another text
+Noting to look at here, it's fairly simple!
+
+## Prerequisites
 
 :enddefault:
 
-:info: { This is info }
-:warning: { This is info }
-:success: { This is info }
+:warning: {⚠️ Docker must be installed and setup successfully!}
 
-:title: Hello World
+:default:
 
-:route: GET /api/sex | {json}
+## Installation
 
-:route: POST /api/sex | key : value, hello : world, key2 : value2
+- Download the executable file
+- Initialize the tool
 
-:img: https://career-advice.jobs.ac.uk/wp-content/uploads/Japan-e1634207070862.jpg.optimal.jpg
+:enddefault:
 
-:card: Apple New Phone | Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum. 
+:bash: {devonboard init}
 
-:button: Click me
+:default:
 
-:assesment: [Git assesment], {try out a git pull command}, <git-field>, (if(textfield == "git pull") { console.log("hello")} else { console.log('wrong')})
+- To run the documentation locally
+  :enddefault:
+
+:bash: {devonboard docs}
+:info: {The Docs will be running on https://127.0.0.1:5173}
+
+:default:
+
+- To start the tool
+  :enddefault:
+
+:bash: {devonboard start}
+
+:success: {Tool setup is successful!✅}
+
+:default:
+
+# Customs
+
+Navbar
+:enddefault:
+
+:code: {:navbar: option1 , option1 }
+
+:default:
+Sidebar
+:enddefault:
+
+:code: {:sidebar: [Item1] {Subitem1-1, Subitem1-2} | [Item2] {Subitem2-1, Subitem2-2, Subitem2-3}}
+
+:default:
+Footer
+:enddefault:
+
+:code: {:footer: Option1 , Option2}
+
+:default:
+Images
+:enddefault:
+:img: https://wallup.net/wp-content/uploads/2019/09/08/455469-anime-girl-beautiful-cute-beauty-happy-lovely-love-girls.jpg
+
+:code: {:img: online/url}
+
+:default:
+
+# DevOnBoard Specials
+
+API Routes
+:enddefault:
+
+:route: GET /api/route | {body}
+
+:route: POST /api/route | key : value, hello : world, key2 : value2
+
+:code: {:route: GET /api/route | {body}}
+:code: {:route: POST /api/route | key : value, hello : world, key2 : value2}
+
+:default:
+Assessments
+:enddefault:
 
 :assesment: [Docker assesment], {try out a docker pull command}, <docker-field>, (if(textfield == "docker pull") { return true; } else { return false; })
 
-:code: {console.log("Hello world")}, {const x = 2.5;};
-
-:bash: {console.log("Hello world")}, {const x = 2.5;};
-
-:code: {console.log("Hello world")}, {const x = 2.5;};
+:code: {:assesment: [Docker assesment], {try out a docker pull command}, <docker-field>, (if(textfield == "docker pull") { return true; } else { return false; })}
 
 
-:footer: Privacy, FAQ, Careers
+
+:footer: Contact Us , FAQs

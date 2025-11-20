@@ -32,7 +32,7 @@ export async function parseMarkdown(md: string) {
       </g>
     </svg>
   );
-  const handleCopy = (text) => {
+  const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
       console.log("copied");
     });
@@ -40,8 +40,6 @@ export async function parseMarkdown(md: string) {
 
   function preprocess(text: string) {
     const lines = text.split("\n");
-    let insideCard = false;
-    let cardBuffer: string[] = [];
     let out: string[] = [];
 
     for (let i = 0; i < lines.length; i++) {
@@ -538,7 +536,7 @@ export async function parseMarkdown(md: string) {
         const key = newKey();
 
         components[key] = (
-          <div className="flex justify-center items-center py-10">
+          <div className="flex justify-center items-center py-5">
             <div className="w-full max-w-3xl bg-[#0a0a0a] border border-neutral-800 rounded-xl shadow-lg overflow-hidden">
               <div className="flex items-center justify-between px-8 py-2 border-b border-neutral-800 bg-[#111]">
                 <span className="text-[11px] text-gray-500 font-mono">
@@ -574,7 +572,7 @@ export async function parseMarkdown(md: string) {
         const key = newKey();
 
         components[key] = (
-          <div className="flex justify-center items-center py-10">
+          <div className="flex justify-center items-center py-5">
             <div className="w-full max-w-3xl bg-[#0a0a0a] border border-neutral-800 rounded-xl shadow-lg overflow-hidden">
               <div className="flex items-center justify-between px-8 py-2 bg-[#0a0a0a]">
                 <span className="text-[11px] text-gray-500 font-mono">
@@ -697,7 +695,7 @@ export async function parseMarkdown(md: string) {
         continue;
       }
       // ---------- DEFAULT / ENDDEFAULT ----------
-      if (line.startsWith(":default:")) {
+      if (line.startsWith(":default:")) { 
         let rawMarkdown = "";
         let j = i + 1;
         let endIndex = -1;
@@ -711,25 +709,48 @@ export async function parseMarkdown(md: string) {
           rawMarkdown += lines[j] + "\n";
         }
 
-        const parsedContent = unified()
-          .use(remarkParse)
-          .use(remarkRehype, { allowDangerousHtml: true })
-          .use(rehypeStringify, { allowDangerousHtml: true })
-          .processSync(rawMarkdown);
+const parsedContent = unified()
+  .use(remarkParse)
+  .use(remarkRehype, { allowDangerousHtml: true })
+  .use(rehypeStringify, { allowDangerousHtml: true })
+  .processSync(rawMarkdown);
 
-        let parsedHtml = String(parsedContent);
+let parsedHtml = String(parsedContent);
 
-        const headingClass =
-          "text-2xl/7 font-bold text-white sm:truncate sm:text-3xl sm:tracking-tight";
+// Tailwind heading classes
+const headingClasses = {
+  1: "text-4xl font-bold text-white sm:truncate sm:text-3xl sm:tracking-tight",
+  2: "text-3xl font-semibold text-white sm:text-2xl sm:tracking-tight",
+  3: "text-2xl font-semibold text-white",
+  4: "text-xl font-semibold text-white",
+  5: "text-lg font-medium text-white",
+  6: "text-base font-medium text-white",
+};
 
-        parsedHtml = parsedHtml.replace(
-          /<h([1-6])([^>]*)>/g,
-          `<h$1 class="${headingClass}" $2>`
-        );
+// Apply classes
+parsedHtml = parsedHtml.replace(
+  /<h([1-6])([^>]*)>/g,
+  (level, attrs) => {
+    const cls = headingClasses[Number(level) as 1 | 2 | 3 | 4 | 5 | 6];
+
+    if (/class="/.test(attrs)) {
+      return `<h${level}${attrs.replace(
+        /class="([^"]*)"/,
+        (_: any, existing: any) => ` class="${existing} ${cls}"`
+      )}>`;
+    }
+
+    if (attrs.trim()) {
+      return `<h${level} class="${cls}"${attrs}>`;
+    }
+
+    return `<h${level} class="${cls}">`;
+  }
+);
 
         const key = newKey();
         components[key] = (
-          <div className="flex-1 md:ml-4 px-6 md:px-12 py-10">
+          <div className="flex-1 md:ml-4 px-6 md:px-12 py-5">
             <div
               className="max-w-3xl mx-auto leading-12 text-gray-200 prose prose-invert prose-neutral prose-p:text-gray-300 prose-a:text-green-500 prose-code:text-green-400 prose-pre:bg-neutral-900 prose-pre:border prose-pre:border-neutral-800"
               dangerouslySetInnerHTML={{ __html: parsedHtml }}
