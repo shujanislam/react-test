@@ -34,9 +34,55 @@ export async function parseMarkdown(md: string) {
   );
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      console.log("copied");
     });
+    
+    return true;
   };
+
+  // Helper function to extract content within braces (single or multi-line)
+  function extractBracedContent(lines: string[], startIndex: number, startLine: string): { content: string; endIndex: number } {
+    const afterDirective = startLine.substring(startLine.indexOf('{'));
+    
+    // Check if it's a single-line brace: {...}
+    const openCount = (afterDirective.match(/\{/g) || []).length;
+    const closeCount = (afterDirective.match(/\}/g) || []).length;
+    
+    if (openCount === closeCount && afterDirective.includes('}')) {
+      const openIndex = afterDirective.indexOf('{');
+      const closeIndex = afterDirective.lastIndexOf('}');
+      return {
+        content: afterDirective.substring(openIndex + 1, closeIndex).trim(),
+        endIndex: startIndex
+      };
+    }
+    
+    // Multi-line: collect until closing brace
+    let content = afterDirective.substring(1).trim(); // Remove opening brace and trim
+    let braceCount = 1;
+    let currentIndex = startIndex + 1;
+    
+    while (currentIndex < lines.length && braceCount > 0) {
+      const line = lines[currentIndex];
+      
+      for (const char of line) {
+        if (char === '{') braceCount++;
+        if (char === '}') braceCount--;
+      }
+      
+      if (braceCount > 0) {
+        content += '\n' + line;
+      } else {
+        // Found closing brace
+        const closingIndex = line.lastIndexOf('}');
+        content += '\n' + line.substring(0, closingIndex);
+        return { content: content.trim(), endIndex: currentIndex };
+      }
+      
+      currentIndex++;
+    }
+    
+    return { content: content.trim(), endIndex: currentIndex - 1 };
+  }
 
   function preprocess(text: string) {
     const lines = text.split("\n");
@@ -46,14 +92,14 @@ export async function parseMarkdown(md: string) {
       const line = lines[i];
 
       // ---------- TITLE ----------
-      if (line.startsWith(":title:")) {
-        frontmatter.title = line.replace(":title:", "").trim();
+      if (line.startsWith("@title")) {
+        frontmatter.title = line.replace("@title", "").trim();
         continue;
       }
 
       // ---------- BUTTON ----------
-      if (line.startsWith(":button:")) {
-        const label = line.replace(":button:", "").trim();
+      if (line.startsWith("@button")) {
+        const label = line.replace("@button", "").trim();
         const key = newKey();
 
         components[key] = (
@@ -67,55 +113,44 @@ export async function parseMarkdown(md: string) {
         out.push(`<div data-comp="${key}"></div>`);
         continue;
       }
-
-      // ---------- ALERT ----------
-      if (line.startsWith(":alert:")) {
-        const msg = line.replace(":alert:", "").trim();
-        const key = newKey();
-
-        components[key] = (
-          <div className="p-3 bg-red-100 text-red-800 rounded border border-red-300">
-            {msg}
-          </div>
-        );
-
-        out.push(`<div data-comp="${key}"></div>`);
-        continue;
-      }
-
       // ---------- NAVBAR (Tailwind v3 version) ----------
-      if (line.startsWith(":navbar:")) {
-        const raw = line.replace(":navbar:", "").trim();
-        const items = raw.split(",").map((x) => x.trim());
-
+      if (line.startsWith("@navbar")) {
+        const raw = line.replace("@navbar", "").trim();
+        const items = raw.split("|").map((x) => x.trim());
+        const links = items.map((item) => {
+          const match = item.match(/\[(.*?)\]/);
+          return match ? match[1] : "#";
+        });
+        const labels = items.map((item) => item.split("[")[0].trim());
         const key = newKey();
-
         // React JSX version stored in components
         components[key] = (
           <nav className="fixed top-0 left-0 w-full bg-black border-b border-gray-800 z-50">
             <div className="mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
               {/* Desktop menu */}
               <div className="hidden md:flex items-center space-x-6">
-                {items.map((item, i) => (
+                {labels.map((item, i) => (
                   <a
                     key={i}
-                    href="#"
+                    href={links[i]}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="px-3 py-2 text-gray-300 font-medium hover:text-white transition"
                   >
                     {item}
                   </a>
                 ))}
               </div>
-
               {/* Search bar */}
               <div className="hidden md:block relative">
                 <input
                   type="text"
                   placeholder="Search docs..."
                   className="w-128 rounded bg-black text-gray-200 placeholder-gray-500 px-4 py-2 pr-14 border border-gray-700"
+                  onFocus={() => { document.getElementById("ctrl-key").style.visibility = "hidden" }} 
+                  onBlur={() => { document.getElementById("ctrl-key").style.visibility = "visible" }} 
                 />
-
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 transform flex items-center space-x-1 text-xs text-gray-400">
+                <div id="ctrl-key" className="absolute right-2 top-1/2 -translate-y-1/2 transform flex items-center space-x-1 text-xs text-gray-400">
                   <kbd className="px-2 py-0.5 bg-black border border-gray-700 rounded">
                     Ctrl
                   </kbd>
@@ -125,7 +160,6 @@ export async function parseMarkdown(md: string) {
                   </kbd>
                 </div>
               </div>
-
               {/* Mobile button */}
               <button
                 className="md:hidden text-gray-300 hover:text-white focus:outline-none"
@@ -151,22 +185,22 @@ export async function parseMarkdown(md: string) {
                 </svg>
               </button>
             </div>
-
             {/* Mobile menu */}
             <div
               id="mobileMenu"
               className="hidden md:hidden border-t border-gray-800 bg-black px-4 py-3 space-y-2"
             >
-              {items.map((item, i) => (
+              {labels.map((item, i) => (
                 <a
                   key={i}
-                  href="#"
+                  href={links[i]}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="block px-3 py-2 text-gray-300 hover:text-white transition"
                 >
                   {item}
                 </a>
               ))}
-
               <input
                 type="text"
                 placeholder="Search..."
@@ -175,15 +209,14 @@ export async function parseMarkdown(md: string) {
             </div>
           </nav>
         );
-
         out.push(`<div data-comp="${key}"></div>`);
         out.push(`<div style="height: 80px"></div>`); // navbar offset
         continue;
       }
 
       // ---------- IMG ----------
-      if (line.startsWith(":img:")) {
-        const src = line.replace(":img:", "").trim();
+      if (line.startsWith("@img")) {
+        const src = line.replace("@img", "").trim();
         const key = newKey();
 
         components[key] = (
@@ -201,8 +234,8 @@ export async function parseMarkdown(md: string) {
         continue;
       }
       // ---------- SIDEBAR ----------
-      if (line.startsWith(":sidebar:")) {
-        const raw = line.replace(":sidebar:", "").trim();
+      if (line.startsWith("@sidebar")) {
+        const raw = line.replace("@sidebar", "").trim();
 
         const sections = raw.split("|").map((s) => s.trim());
         const key = newKey();
@@ -288,8 +321,8 @@ export async function parseMarkdown(md: string) {
       }
 
       // ---------- ROUTE ----------
-      if (line.startsWith(":route:")) {
-        const raw = line.replace(":route:", "").trim();
+      if (line.startsWith("@route")) {
+        const raw = line.replace("@route", "").trim();
         const [methodEndpoint, dataRaw] = raw.split("|").map((s) => s.trim());
         const [method, endpoint] = methodEndpoint
           .split(" ")
@@ -413,8 +446,8 @@ export async function parseMarkdown(md: string) {
       }
 
       // ---------- ASSESSMENT ----------
-      if (line.startsWith(":assessment:") || line.startsWith(":assesment:")) {
-        const raw = line.replace(/:asses?ment:/, "").trim();
+      if (line.startsWith("@assessment") || line.startsWith("@assesment")) {
+        const raw = line.replace(/@asses?ment/, "").trim();
 
         const headerMatch = raw.match(/\[(.*?)\]/);
         const descMatch = raw.match(/\{(.*?)\}/);
@@ -502,8 +535,8 @@ export async function parseMarkdown(md: string) {
       }
 
       // ---------- CARD ----------
-      if (line.startsWith(":card:")) {
-        const raw = line.replace(":card:", "").trim();
+      if (line.startsWith("@card")) {
+        const raw = line.replace("@card", "").trim();
         const [header, details] = raw.split("|").map((s) => s.trim());
 
         const key = newKey();
@@ -526,32 +559,72 @@ export async function parseMarkdown(md: string) {
       }
 
       // ---------- CODE ----------
-      if (line.startsWith(":code:")) {
-        const raw = line.replace(":code:", "").trim();
-        const matches = [...raw.matchAll(/\{([^}]+)\}/g)];
+      if (line.startsWith("@code")) {
+        const raw = line.replace("@code", "").trim();
+        let codeLines: string[] = [];
 
-        const lines = matches.length
-          ? matches.map((m) => m[1].trim())
-          : ["Code Error"];
+        // Check if content is in braces
+        if (raw.includes('{')) {
+          const result = extractBracedContent(lines, i, line);
+          codeLines = result.content.split('\n').map(l => l.trim()).filter(l => l);
+          i = result.endIndex;
+        } else {
+          // Fallback to old regex method for backward compatibility
+          const matches = [...raw.matchAll(/\{([^}]+)\}/g)];
+          codeLines = matches.length
+            ? matches.map((m) => m[1].trim())
+            : ["Code Error"];
+        }
+
         const key = newKey();
 
         components[key] = (
-          <div className="flex justify-center items-center py-5">
+          <div className="code-block flex justify-center items-center py-5">
             <div className="w-full max-w-3xl bg-[#0a0a0a] border border-neutral-800 rounded-xl shadow-lg overflow-hidden">
-              <div className="flex items-center justify-between px-8 py-2 border-b border-neutral-800 bg-[#111]">
+              <div className="flex items-center justify-between px-8 py-2 border-b border-neutral-800 bg-[#111] relative">
                 <span className="text-[11px] text-gray-500 font-mono">
                   code snippet
                 </span>
+
+                {/* Copy Button */}
                 <button
-                  className="text-gray-400 hover:text-gray-200"
-                  onClick={() => handleCopy(lines.join("\n"))}
+                  className="copy-btn text-gray-400 hover:text-gray-200 transition-opacity"
+                  onClick={(e) => {
+                    const wrapper = e.currentTarget.closest(".code-block");
+                    const copiedEl = wrapper.querySelector(".copied-status");
+                    const copyBtn = wrapper.querySelector(".copy-btn");
+                    const code = codeLines.join("\n");
+
+                    handleCopy(code);
+
+                    copyBtn.style.display = "none";
+                    copiedEl.style.display = "block";
+
+                    setTimeout(() => {
+                      copiedEl.style.display = "none";
+                      copyBtn.style.display = "block";
+                    }, 3000);
+                  }}
                 >
                   <CopyIcon />
                 </button>
+
+                {/* Copied Label */}
+                <p
+                  className="copied-status text-sm"
+                  style={{
+                    display: "none",
+                    position: "absolute",
+                    right: "32px",
+                  }}
+                >
+                  Copied!
+                </p>
               </div>
 
+              {/* Code Body */}
               <pre className="px-5 py-4 text-[13px] leading-relaxed text-gray-200 font-mono overflow-x-auto whitespace-pre-wrap">
-                {lines.map((line) => "  " + line).join("\n")}
+                {codeLines.map((l) => "  " + l).join("\n")}
               </pre>
             </div>
           </div>
@@ -562,33 +635,77 @@ export async function parseMarkdown(md: string) {
       }
 
       // ---------- BASH ----------
-      if (line.startsWith(":bash:")) {
-        const raw = line.replace(":bash:", "").trim();
-        const matches = [...raw.matchAll(/\{([^}]+)\}/g)];
+      if (line.startsWith("@bash")) {
+        const raw = line.replace("@bash", "").trim();
+        let bashLines: string[] = [];
 
-        const lines = matches.length
-          ? matches.map((m) => m[1].trim())
-          : ["Code Error"];
+        // Check if content is in braces
+        if (raw.includes('{')) {
+          const result = extractBracedContent(lines, i, line);
+          bashLines = result.content.split('\n').map(l => l.trim()).filter(l => l);
+          i = result.endIndex;
+        } else {
+          // Fallback to old regex method
+          const matches = [...raw.matchAll(/\{([^}]+)\}/g)];
+          bashLines = matches.length
+            ? matches.map((m) => m[1].trim())
+            : ["Code Error"];
+        }
+
         const key = newKey();
 
         components[key] = (
-          <div className="flex justify-center items-center py-5">
+          <div className="bash-block flex justify-center items-center py-5">
             <div className="w-full max-w-3xl bg-[#0a0a0a] border border-neutral-800 rounded-xl shadow-lg overflow-hidden">
-              <div className="flex items-center justify-between px-8 py-2 bg-[#0a0a0a]">
+              
+              {/* Header */}
+              <div className="flex items-center justify-between px-8 py-2 bg-[#0a0a0a] relative">
                 <span className="text-[11px] text-gray-500 font-mono">
                   bash
                 </span>
+
+                {/* Copy Button */}
                 <button
-                  className="text-gray-400 hover:text-gray-200"
-                  onClick={() => handleCopy(lines.join("\n"))}
+                  className="copy-btn text-gray-400 hover:text-gray-200 transition-opacity"
+                  onClick={(e) => {
+                    const wrapper = e.currentTarget.closest(".bash-block");
+                    const copiedEl = wrapper.querySelector(".copied-status");
+                    const copyBtn = wrapper.querySelector(".copy-btn");
+
+                    handleCopy(bashLines.join("\n"));
+
+                    // Swap UI
+                    copyBtn.style.display = "none";
+                    copiedEl.style.display = "block";
+
+                    // Reset after 3s
+                    setTimeout(() => {
+                      copiedEl.style.display = "none";
+                      copyBtn.style.display = "block";
+                    }, 3000);
+                  }}
                 >
                   <CopyIcon />
                 </button>
+
+                {/* Copied Label */}
+                <p
+                  className="copied-status text-sm"
+                  style={{
+                    display: "none",
+                    position: "absolute",
+                    right: "32px",
+                  }}
+                >
+                  Copied!
+                </p>
               </div>
 
+              {/* Code Body */}
               <pre className="px-5 py-4 text-[13px] leading-relaxed text-gray-200 font-mono overflow-x-auto whitespace-pre-wrap">
-                {lines.map((line) => "  " + line).join("\n")}
+                {bashLines.map((line) => "  " + line).join("\n")}
               </pre>
+
             </div>
           </div>
         );
@@ -598,8 +715,8 @@ export async function parseMarkdown(md: string) {
       }
 
       // ---------- FOOTER ----------
-      if (line.startsWith(":footer:")) {
-        const raw = line.replace(":footer:", "").trim();
+      if (line.startsWith("@footer")) {
+        const raw = line.replace("@footer", "").trim();
         const items = raw.split(",").map((i) => i.trim());
 
         const key = newKey();
@@ -640,13 +757,13 @@ export async function parseMarkdown(md: string) {
 
       // ---------- ALERT TYPES ----------
       if (
-        line.startsWith(":info:") ||
-        line.startsWith(":alert:") ||
-        line.startsWith(":warning:") ||
-        line.startsWith(":success:")
+        line.startsWith("@info") ||
+        line.startsWith("@alert") ||
+        line.startsWith("@warning") ||
+        line.startsWith("@success")
       ) {
         const typeMatch = line.match(
-          /^:(info|alert|warning|success):\s*\{([^}]+)\}/
+          /^@(info|alert|warning|success)\s*\{([^}]+)\}/
         );
         if (!typeMatch) continue;
 
@@ -694,61 +811,66 @@ export async function parseMarkdown(md: string) {
         out.push(`<div data-comp="${key}"></div>`);
         continue;
       }
-      // ---------- DEFAULT / ENDDEFAULT ----------
-      if (line.startsWith(":default:")) { 
+      // ---------- SECTION ----------
+      if (line.startsWith("@section")) {
+        const raw = line.replace("@section", "").trim();
         let rawMarkdown = "";
-        let j = i + 1;
-        let endIndex = -1;
 
-        // Collect lines until :enddefault:
-        for (; j < lines.length; j++) {
-          if (lines[j].trim().startsWith(":enddefault:")) {
-            endIndex = j;
-            break;
-          }
-          rawMarkdown += lines[j] + "\n";
+        // Check if content is inline (single line with braces)
+        if (raw.startsWith("{") && raw.endsWith("}")) {
+          // Inline: @section { content }
+          rawMarkdown = raw.slice(1, -1).trim();
+        } else if (raw.startsWith("{")) {
+          // Multi-line: @section { ... }
+          const result = extractBracedContent(lines, i, line);
+          rawMarkdown = result.content;
+          i = result.endIndex;
         }
 
-const parsedContent = unified()
-  .use(remarkParse)
-  .use(remarkRehype, { allowDangerousHtml: true })
-  .use(rehypeStringify, { allowDangerousHtml: true })
-  .processSync(rawMarkdown);
+        // Parse the markdown inside the section
+        const parsedContent = unified()
+          .use(remarkParse)
+          .use(remarkRehype, { allowDangerousHtml: true })
+          .use(rehypeStringify, { allowDangerousHtml: true })
+          .processSync(rawMarkdown);
 
-let parsedHtml = String(parsedContent);
+        let parsedHtml = String(parsedContent);
 
-// Tailwind heading classes
-const headingClasses = {
-  1: "text-4xl font-bold text-white sm:truncate sm:text-3xl sm:tracking-tight",
-  2: "text-3xl font-semibold text-white sm:text-2xl sm:tracking-tight",
-  3: "text-2xl font-semibold text-white",
-  4: "text-xl font-semibold text-white",
-  5: "text-lg font-medium text-white",
-  6: "text-base font-medium text-white",
-};
+        // Tailwind heading classes
+        const headingClasses: Record<number, string> = {
+          1: "text-4xl font-bold text-white sm:truncate sm:text-3xl sm:tracking-tight",
+          2: "text-3xl font-semibold text-white sm:text-2xl sm:tracking-tight",
+          3: "text-2xl font-semibold text-white",
+          4: "text-xl font-semibold text-white",
+          5: "text-lg font-medium text-white",
+          6: "text-base font-medium text-white",
+        };
 
-// Apply classes
-parsedHtml = parsedHtml.replace(
-  /<h([1-6])([^>]*)>/g,
-  (level, attrs) => {
-    const cls = headingClasses[Number(level) as 1 | 2 | 3 | 4 | 5 | 6];
+        // Safe heading injection
+        parsedHtml = parsedHtml.replace(
+          /<h([1-6])([^>]*)>/g,
+          (match, levelStr, attrs) => {
+            const level = Number(levelStr);
+            const cls = headingClasses[level];
 
-    if (/class="/.test(attrs)) {
-      return `<h${level}${attrs.replace(
-        /class="([^"]*)"/,
-        (_: any, existing: any) => ` class="${existing} ${cls}"`
-      )}>`;
-    }
+            if (attrs.includes("class=")) {
+              return match.replace(
+                /class="([^"]*)"/,
+                (_full, existingClasses) =>
+                  `<h${level} class="${existingClasses} ${cls}"`
+              );
+            }
 
-    if (attrs.trim()) {
-      return `<h${level} class="${cls}"${attrs}>`;
-    }
+            if (attrs.trim()) {
+              return `<h${level} class="${cls}"${attrs}>`;
+            }
 
-    return `<h${level} class="${cls}">`;
-  }
-);
+            return `<h${level} class="${cls}">`;
+          }
+        );
 
         const key = newKey();
+
         components[key] = (
           <div className="flex-1 md:ml-4 px-6 md:px-12 py-5">
             <div
@@ -759,14 +881,6 @@ parsedHtml = parsedHtml.replace(
         );
 
         out.push(`<div data-comp="${key}"></div>`);
-
-        // Skip lines that were processed
-        if (endIndex !== -1) i = endIndex;
-        continue;
-      }
-
-      if (line.startsWith(":enddefault:")) {
-        // Optional: just skip it since :default: already handled
         continue;
       }
 

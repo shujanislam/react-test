@@ -17,14 +17,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
+    const socket = new WebSocket("ws://localhost:3000/ws");
 
     socket.onopen = () => {
       console.log("WebSocket connected");
     };
 
     socket.onmessage = (event) => {
-      const msg = event.data || ''; // fallback if message empty
+      const msg = event.data || exampleMd; // fallback if message empty
       parseMarkdown(msg).then((r) => {
         setHtml(r.html);
         setFm(r.frontmatter);
