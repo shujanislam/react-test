@@ -113,6 +113,7 @@ export async function parseMarkdown(md: string) {
         out.push(`<div data-comp="${key}"></div>`);
         continue;
       }
+
       // ---------- NAVBAR (Tailwind v3 version) ----------
       if (line.startsWith("@navbar")) {
         const raw = line.replace("@navbar", "").trim();
@@ -147,8 +148,14 @@ export async function parseMarkdown(md: string) {
                   type="text"
                   placeholder="Search docs..."
                   className="w-128 rounded bg-black text-gray-200 placeholder-gray-500 px-4 py-2 pr-14 border border-gray-700"
-                  onFocus={() => { document.getElementById("ctrl-key").style.visibility = "hidden" }} 
-                  onBlur={() => { document.getElementById("ctrl-key").style.visibility = "visible" }} 
+                  onFocus={() => { 
+                    const el = document.getElementById("ctrl-key");
+                    if (el) el.style.visibility = "hidden";
+                  }} 
+                  onBlur={() => { 
+                    const el = document.getElementById("ctrl-key");
+                    if (el) el.style.visibility = "visible";
+                  }} 
                 />
                 <div id="ctrl-key" className="absolute right-2 top-1/2 -translate-y-1/2 transform flex items-center space-x-1 text-xs text-gray-400">
                   <kbd className="px-2 py-0.5 bg-black border border-gray-700 rounded">
@@ -582,6 +589,7 @@ export async function parseMarkdown(md: string) {
           <div className="code-block flex justify-center items-center py-5">
             <div className="w-full max-w-3xl bg-[#0a0a0a] border border-neutral-800 rounded-xl shadow-lg overflow-hidden">
               <div className="flex items-center justify-between px-8 py-2 border-b border-neutral-800 bg-[#111] relative">
+
                 <span className="text-[11px] text-gray-500 font-mono">
                   code snippet
                 </span>
@@ -591,18 +599,20 @@ export async function parseMarkdown(md: string) {
                   className="copy-btn text-gray-400 hover:text-gray-200 transition-opacity"
                   onClick={(e) => {
                     const wrapper = e.currentTarget.closest(".code-block");
-                    const copiedEl = wrapper.querySelector(".copied-status");
-                    const copyBtn = wrapper.querySelector(".copy-btn");
+                    if (!wrapper) return;
+                    
+                    const copiedEl = wrapper.querySelector(".copied-status") as HTMLElement;
+                    const copyBtn = wrapper.querySelector(".copy-btn") as HTMLElement;
                     const code = codeLines.join("\n");
 
                     handleCopy(code);
 
-                    copyBtn.style.display = "none";
-                    copiedEl.style.display = "block";
+                    if (copyBtn) copyBtn.style.display = "none";
+                    if (copiedEl) copiedEl.style.display = "block";
 
                     setTimeout(() => {
-                      copiedEl.style.display = "none";
-                      copyBtn.style.display = "block";
+                      if (copiedEl) copiedEl.style.display = "none";
+                      if (copyBtn) copyBtn.style.display = "block";
                     }, 3000);
                   }}
                 >
@@ -669,19 +679,21 @@ export async function parseMarkdown(md: string) {
                   className="copy-btn text-gray-400 hover:text-gray-200 transition-opacity"
                   onClick={(e) => {
                     const wrapper = e.currentTarget.closest(".bash-block");
-                    const copiedEl = wrapper.querySelector(".copied-status");
-                    const copyBtn = wrapper.querySelector(".copy-btn");
+                    if (!wrapper) return;
+                    
+                    const copiedEl = wrapper.querySelector(".copied-status") as HTMLElement;
+                    const copyBtn = wrapper.querySelector(".copy-btn") as HTMLElement;
 
                     handleCopy(bashLines.join("\n"));
 
                     // Swap UI
-                    copyBtn.style.display = "none";
-                    copiedEl.style.display = "block";
+                    if (copyBtn) copyBtn.style.display = "none";
+                    if (copiedEl) copiedEl.style.display = "block";
 
                     // Reset after 3s
                     setTimeout(() => {
-                      copiedEl.style.display = "none";
-                      copyBtn.style.display = "block";
+                      if (copiedEl) copiedEl.style.display = "none";
+                      if (copyBtn) copyBtn.style.display = "block";
                     }, 3000);
                   }}
                 >
